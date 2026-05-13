@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniChat Pro - 完整通訊系統</title>
+    <style>
+        :root { --primary: #007bff; --admin: #dc3545; --bg: #f0f2f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; justify-content: center; align-items: center; }
+        
+        /* 登入介面 */
+        #auth-container { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 320px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        
+        /* 主介面 */
+        #main-app { display: none; width: 95vw; height: 90vh; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; }
+        .flex { display: flex; height: 100%; }
+        
+        /* 側邊欄 */
+        #sidebar { width: 280px; border-right: 1px solid #eee; display: flex; flex-direction: column; background: #f8f9fa; }
+        .header { padding: 20px; background: #fff; border-bottom: 1px solid #eee; font-weight: bold; font-size: 1.1rem; }
+        #contact-list { flex-grow: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        #contact-list li { padding: 15px 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; }
+        #contact-list li:hover { background: #e9ecef; }
+
+        /* 聊天視窗 */
+        #chat-area { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+        #chat-header { padding: 15px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        #messages-box { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; background: #f9f9f9; }
+        
+        /* 訊息氣泡 */
+        .msg { margin-bottom: 12px; max-width: 70%; padding: 10px 15px; border-radius: 15px; line-height: 1.5; position: relative; word-wrap: break-word; }
+        .msg.sent { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg.received { background: #e4e6eb; color: #050505; align-self: flex-end; border-bottom-left-radius: 2px; align-self: flex-start; }
+        .msg .sender { font-size: 0.7rem; opacity: 0.8; margin-bottom: 4px; display: block; }
+        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; }
+
+        /* 輸入欄位 */
+        #input-bar { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 12px; background: #fff; }
+        #input-bar input { margin: 0; }
+        #input-bar button { width: auto; padding: 0 20px; margin: 0; }
+
+        /* 小遊戲面板 */
+        #game-menu { position: absolute; bottom: 85px; left: 20px; background: white; border: 1px solid #ddd; padding: 15px; border-radius: 10px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .admin-badge { background: var(--admin); color: white; padding: 2px 8px; border-radius: 20px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-container">
+        <h2>OmniChat</h2>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button id="login-btn">登入</button>
+        <button id="reg-btn" style="background:#28a745">註冊</button>
+    </div>
+
+    <div id="main-app">
+        <div class="flex">
+            <aside id="sidebar">
+                <div class="header">對話清單</div>
+                <ul id="contact-list"></ul>
+                <div style="padding:15px; border-top:1px solid #eee">
+                    <button id="logout-btn" style="background:#6c757d">登出系統</button>
+                </div>
+            </aside>
+
+            <section id="chat-area">
+                <header id="chat-header">
+                    <div>
+                        <span id="target-name">選擇聊天室</span>
+                        <span id="admin-tag" class="admin-badge" style="display:none">管理員模式</span>
+                    </div>
+                </header>
+
+                <div id="messages-box"></div>
+
+                <div id="game-menu">
+                    <strong>🎲 決策小工具</strong><hr>
+                    <button onclick="playGame('輪盤結果：排骨便當')">🍱 便當</button>
+                    <button onclick="playGame('輪盤結果：麥當勞')">🍔 麥當勞</button>
+                    <button onclick="playGame('輪盤結果：牛肉麵')">🍜 牛肉麵</button>
+                </div>
+
+                <div id="input-bar">
+                    <button id="game-btn">🎲</button>
+                    <input type="file" id="file-input" style="display:none" accept="image/*">
+                    <button id="file-trigger">📷</button>
+                    <input type="text" id="msg-input" placeholder="說點什麼...">
+                    <button id="send-btn">發送</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+        // Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVXY8MHOOtwiMlj5qWukblZEwE-U4XAH4",
+            authDomain: "message-2a055.firebaseapp.com",
+            projectId: "message-2a055",
+            storageBucket: "message-2a055.firebasestorage.app",
+            messagingSenderId: "690334146917",
+            appId: "1:690334146917:web:190659e9a11a0b3500c18c",
+            measurementId: "G-8CPKBYSNQB"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        let currentUser = null;
+        let currentChatId = "public_hall"; // 預設公共大廳
+
+        // 1. 監聽登入狀態
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-container').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists() && userDoc.data().role === 'admin') {
+                    document.getElementById('admin-tag').style.display = 'inline';
+                    loadAdminView();
+                } else {
+                    loadUserView();
+                }
+                switchChat("public_hall", "公共大廳");
+            } else {
+                document.getElementById('auth-container').style.display = 'block';
+                document.getElementById('main-app').style.display = 'none';
+            }
+        });
+
+        // 2. 註冊/登入
+        document.getElementById('reg-btn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const pw = document.getElementById('password').value;
+            try {
+                const res = await createUserWithEmailAndPassword(auth, email, pw);
+                await setDoc(doc(db, "users", res.user.uid), { email, role: 'user', uid: res.user.uid });
+                alert("註冊成功！");
+            } catch (e) { alert(e.message); }
+        };
+
+        document.getElementById('login-btn').onclick = () => {
+            signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value).catch(e => alert(e.message));
+        };
+
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+        // 3. 聊天核心
+        let unsub = null;
+        function switchChat(chatId, title) {
+            currentChatId = chatId;
+            document.getElementById('target-name').innerText = title;
+            if (unsub) unsub();
+
+            const q = query(collection(db, `chats/${chatId}/messages`), orderBy("timestamp", "asc"));
+            unsub = onSnapshot(q, (snapshot) => {
+                const box = document.getElementById('messages-box');
+                box.innerHTML = '';
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    const isMe = data.uid === currentUser.uid;
+                    const content = data.type === 'img' ? `<img src="${data.text}" onclick="window.open('${data.text}')">` : `<span>${data.text}</span>`;
+                    box.innerHTML += `
+                        <div class="msg ${isMe ? 'sent' : 'received'}">
+                            <small class="sender">${data.sender}</small>
+                            ${content}
+                        </div>`;
+                });
+                box.scrollTop = box.scrollHeight;
+            });
+        }
+
+        // 發送文字訊息
+        document.getElementById('send-btn').onclick = async () => {
+            const text = document.getElementById('msg-input').value;
+            if (!text) return;
+            await addDoc(collection(db, `chats/${currentChatId}/messages`), {
+                text, uid: currentUser.uid, sender: currentUser.email, timestamp: serverTimestamp(), type: 'text'
+            });
+            document.getElementById('msg-input').value = '';
+        };
+
+        // 4. 圖片上傳
+        const fileInput = document.getElementById('file-input');
+        document.getElementById('file-trigger').onclick = () => fileInput.click();
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const sRef = ref(storage, `chat_files/${Date.now()}_${file.name}`);
+            const snap = await uploadBytes(sRef, file);
+            const url = await getDownloadURL(snap.ref);
+            await addDoc(collection(db, `chats/${currentChatId}/messages`), {
+                text: url, uid: currentUser.uid, sender: currentUser.email, timestamp: serverTimestamp(), type: 'img'
+            });
+        };
+
+        // 5. 管理員與列表
+        function loadUserView() {
+            document.getElementById('contact-list').innerHTML = `<li onclick="location.reload()">🌍 公共大廳</li>`;
+        }
+
+        async function loadAdminView() {
+            const list = document.getElementById('contact-list');
+            list.innerHTML = `<li onclick="location.reload()">🌍 公共大廳</li><div style="padding:10px; font-size:12px; color:#888">所有頻道監控：</div>`;
+            const snap = await getDocs(collection(db, "chats"));
+            snap.forEach(d => {
+                const li = document.createElement('li');
+                li.innerText = `👁️ ${d.id}`;
+                li.onclick = () => switchChat(d.id, `監控中: ${d.id}`);
+                list.appendChild(li);
+            });
+        }
+
+        // 6. 小遊戲
+        document.getElementById('game-btn').onclick = () => {
+            const m = document.getElementById('game-menu');
+            m.style.display = m.style.display === 'block' ? 'none' : 'block';
+        };
+
+        window.playGame = async (res) => {
+            await addDoc(collection(db, `chats/${currentChatId}/messages`), {
+                text: res, uid: "system", sender: "🎲 系統", timestamp: serverTimestamp(), type: 'text'
+            });
+            document.getElementById('game-menu').style.display = 'none';
+        };
+    </script>
+</body>
+</html>

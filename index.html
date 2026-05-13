@@ -3,238 +3,329 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniChat Pro - 完整通訊系統</title>
+    <title>OmniChat Ultra - 專業通訊系統</title>
     <style>
-        :root { --primary: #007bff; --admin: #dc3545; --bg: #f0f2f5; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; justify-content: center; align-items: center; }
+        :root { --primary: #075e54; --secondary: #128c7e; --bg: #e5ddd5; --white: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #dadbd3; margin: 0; display: flex; height: 100vh; justify-content: center; align-items: center; }
         
-        /* 登入介面 */
-        #auth-container { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 320px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        /* 登入視窗 */
+        #auth-box { background: var(--white); padding: 30px; border-radius: 10px; shadow: 0 2px 10px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
-        /* 主介面 */
-        #main-app { display: none; width: 95vw; height: 90vh; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; }
-        .flex { display: flex; height: 100%; }
+        /* 主介面容器 */
+        #main-app { display: none; width: 100vw; height: 100vh; background: #ededed; display: flex; overflow: hidden; }
         
-        /* 側邊欄 */
-        #sidebar { width: 280px; border-right: 1px solid #eee; display: flex; flex-direction: column; background: #f8f9fa; }
-        .header { padding: 20px; background: #fff; border-bottom: 1px solid #eee; font-weight: bold; font-size: 1.1rem; }
+        /* 左側欄：好友與狀態 */
+        #side-bar { width: 350px; background: var(--white); border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        .user-profile { padding: 20px; background: #eee; display: flex; align-items: center; justify-content: space-between; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .online { background: #4caf50; } .offline { background: #9e9e9e; } .busy { background: #f44336; }
+        
         #contact-list { flex-grow: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        #contact-list li { padding: 15px 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; }
-        #contact-list li:hover { background: #e9ecef; }
+        #contact-list li { padding: 15px 20px; border-bottom: 1px solid #f2f2f2; cursor: pointer; display: flex; flex-direction: column; }
+        #contact-list li:hover { background: #f5f5f5; }
+        .unread-badge { background: #25d366; color: white; border-radius: 10px; padding: 2px 6px; font-size: 10px; float: right; }
 
-        /* 聊天視窗 */
-        #chat-area { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
-        #chat-header { padding: 15px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        #messages-box { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; background: #f9f9f9; }
+        /* 聊天主區域 */
+        #chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
+        #chat-header { padding: 15px 25px; background: #eee; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
+        #msg-container { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         
-        /* 訊息氣泡 */
-        .msg { margin-bottom: 12px; max-width: 70%; padding: 10px 15px; border-radius: 15px; line-height: 1.5; position: relative; word-wrap: break-word; }
-        .msg.sent { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .msg.received { background: #e4e6eb; color: #050505; align-self: flex-end; border-bottom-left-radius: 2px; align-self: flex-start; }
-        .msg .sender { font-size: 0.7rem; opacity: 0.8; margin-bottom: 4px; display: block; }
-        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; }
+        /* 訊息泡泡 */
+        .msg { padding: 8px 12px; border-radius: 8px; max-width: 60%; position: relative; font-size: 14px; }
+        .msg.sent { background: #dcf8c6; align-self: flex-end; }
+        .msg.received { background: var(--white); align-self: flex-start; }
+        .read-status { font-size: 10px; color: #34b7f1; margin-left: 5px; vertical-align: bottom; }
 
-        /* 輸入欄位 */
-        #input-bar { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 12px; background: #fff; }
-        #input-bar input { margin: 0; }
-        #input-bar button { width: auto; padding: 0 20px; margin: 0; }
+        /* 控制列 */
+        #input-area { padding: 15px; background: #f0f0f0; display: flex; gap: 10px; align-items: center; }
+        #game-panel { position: absolute; bottom: 80px; left: 20px; background: white; border-radius: 10px; padding: 15px; display: none; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
 
-        /* 小遊戲面板 */
-        #game-menu { position: absolute; bottom: 85px; left: 20px; background: white; border: 1px solid #ddd; padding: 15px; border-radius: 10px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .admin-badge { background: var(--admin); color: white; padding: 2px 8px; border-radius: 20px; font-size: 12px; }
+        .admin-view { color: #d32f2f; font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <div id="auth-container">
-        <h2>OmniChat</h2>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password">
+    <!-- 登入模組 -->
+    <div id="auth-box">
+        <h2 id="title">OmniChat 登入</h2>
+        <input type="email" id="email" placeholder="電子信箱">
+        <input type="password" id="password" placeholder="密碼">
+        <div id="reg-fields" style="display:none">
+            <input type="text" id="user-id" placeholder="唯一 ID (例如: user_01)">
+            <input type="text" id="user-name" placeholder="顯示名稱">
+        </div>
         <button id="login-btn">登入</button>
-        <button id="reg-btn" style="background:#28a745">註冊</button>
+        <button id="toggle-reg" style="background:#888">切換到註冊</button>
     </div>
 
-    <div id="main-app">
-        <div class="flex">
-            <aside id="sidebar">
-                <div class="header">對話清單</div>
-                <ul id="contact-list"></ul>
-                <div style="padding:15px; border-top:1px solid #eee">
-                    <button id="logout-btn" style="background:#6c757d">登出系統</button>
+    <!-- 主程式 -->
+    <div id="main-app" style="display:none">
+        <aside id="side-bar">
+            <div class="user-profile">
+                <div>
+                    <span id="my-name">載入中...</span>
+                    <select id="status-select" style="font-size:10px">
+                        <option value="online">在線</option>
+                        <option value="busy">忙碌</option>
+                        <option value="offline">離線</option>
+                    </select>
                 </div>
-            </aside>
+                <button id="logout" style="width:auto; padding:5px; font-size:10px">登出</button>
+            </div>
+            <div style="padding:10px">
+                <input type="text" id="search-id" placeholder="搜尋 ID 加好友...">
+                <button id="add-friend-btn" style="padding:5px">加好友</button>
+                <button id="create-group" style="padding:5px; background:#25d366">建立群組</button>
+            </div>
+            <ul id="contact-list"></ul>
+        </aside>
 
-            <section id="chat-area">
-                <header id="chat-header">
-                    <div>
-                        <span id="target-name">選擇聊天室</span>
-                        <span id="admin-tag" class="admin-badge" style="display:none">管理員模式</span>
-                    </div>
-                </header>
+        <section id="chat-window">
+            <header id="chat-header">
+                <span id="chat-title">請選擇好友</span>
+                <span id="admin-notice" class="admin-view" style="display:none">管理員監控中</span>
+            </header>
+            
+            <div id="msg-container"></div>
 
-                <div id="messages-box"></div>
+            <div id="game-panel">
+                <strong>決定午餐：</strong><br>
+                <button onclick="sendGame('輪盤', '雞肉飯')">🐔 雞肉飯</button>
+                <button onclick="sendGame('投票', '麥當勞')">🍟 麥當勞</button>
+                <button onclick="sendGame('爬梯子', '便利商店')">🏪 便利商店</button>
+            </div>
 
-                <div id="game-menu">
-                    <strong>🎲 決策小工具</strong><hr>
-                    <button onclick="playGame('輪盤結果：排骨便當')">🍱 便當</button>
-                    <button onclick="playGame('輪盤結果：麥當勞')">🍔 麥當勞</button>
-                    <button onclick="playGame('輪盤結果：牛肉麵')">🍜 牛肉麵</button>
-                </div>
-
-                <div id="input-bar">
-                    <button id="game-btn">🎲</button>
-                    <input type="file" id="file-input" style="display:none" accept="image/*">
-                    <button id="file-trigger">📷</button>
-                    <input type="text" id="msg-input" placeholder="說點什麼...">
-                    <button id="send-btn">發送</button>
-                </div>
-            </section>
-        </div>
+            <div id="input-area">
+                <button id="btn-game">🎲</button>
+                <input type="text" id="msg-input" placeholder="輸入訊息...">
+                <button id="btn-send">發送</button>
+            </div>
+        </section>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, doc, getDoc, setDoc, updateDoc, arrayUnion, where, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getDatabase, ref, onValue, set, onDisconnect, serverTimestamp as rdbTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
-        // Firebase 配置
+        // === 1. 設定區域 (請替換為您的配置) ===
         const firebaseConfig = {
-            apiKey: "AIzaSyDVXY8MHOOtwiMlj5qWukblZEwE-U4XAH4",
-            authDomain: "message-2a055.firebaseapp.com",
-            projectId: "message-2a055",
-            storageBucket: "message-2a055.firebasestorage.app",
-            messagingSenderId: "690334146917",
-            appId: "1:690334146917:web:190659e9a11a0b3500c18c",
-            measurementId: "G-8CPKBYSNQB"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const storage = getStorage(app);
+        const rdb = getDatabase(app);
+        const messaging = getMessaging(app);
 
-        let currentUser = null;
-        let currentChatId = "public_hall"; // 預設公共大廳
+        let userProfile = null;
+        let activeChatId = null;
+        let isRegMode = false;
 
-        // 1. 監聽登入狀態
+        // === 2. 註冊與登入 ===
+        document.getElementById('toggle-reg').onclick = () => {
+            isRegMode = !isRegMode;
+            document.getElementById('reg-fields').style.display = isRegMode ? 'block' : 'none';
+            document.getElementById('title').innerText = isRegMode ? 'OmniChat 註冊' : 'OmniChat 登入';
+            document.getElementById('login-btn').innerText = isRegMode ? '完成註冊' : '登入';
+        };
+
+        document.getElementById('login-btn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const pw = document.getElementById('password').value;
+
+            if (isRegMode) {
+                const uid = document.getElementById('user-id').value;
+                const name = document.getElementById('user-name').value;
+                try {
+                    const res = await createUserWithEmailAndPassword(auth, email, pw);
+                    await setDoc(doc(db, "users", res.user.uid), { 
+                        customId: uid, 
+                        displayName: name, 
+                        email: email, 
+                        role: 'user',
+                        friends: []
+                    });
+                } catch (e) { alert(e.message); }
+            } else {
+                signInWithEmailAndPassword(auth, email, pw).catch(e => alert(e.message));
+            }
+        };
+
+        // === 3. 線上狀態 (onDisconnect) ===
+        function setupPresence(uid) {
+            const statusRef = ref(rdb, '/status/' + uid);
+            const connectedRef = ref(rdb, '.info/connected');
+
+            onValue(connectedRef, (snap) => {
+                if (snap.val() === true) {
+                    onDisconnect(statusRef).set({ state: 'offline', last_changed: rdbTimestamp() });
+                    set(statusRef, { state: 'online', last_changed: rdbTimestamp() });
+                }
+            });
+
+            document.getElementById('status-select').onchange = (e) => {
+                set(statusRef, { state: e.target.value, last_changed: rdbTimestamp() });
+            };
+        }
+
+        // === 4. 推播通知 ===
+        async function setupMessaging() {
+            try {
+                const token = await getToken(messaging, { vapidKey: 'YOUR_VAPID_KEY' });
+                if (token) await updateDoc(doc(db, "users", auth.currentUser.uid), { fcmToken: token });
+            } catch (e) { console.log("通知權限遭拒"); }
+        }
+
+        onMessage(messaging, (payload) => {
+            new Notification(payload.notification.title, { body: payload.notification.body });
+        });
+
+        // === 5. 核心邏輯：監聽與通訊 ===
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                currentUser = user;
-                document.getElementById('auth-container').style.display = 'none';
-                document.getElementById('main-app').style.display = 'block';
-                
                 const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists() && userDoc.data().role === 'admin') {
-                    document.getElementById('admin-tag').style.display = 'inline';
-                    loadAdminView();
-                } else {
-                    loadUserView();
+                userProfile = userDoc.data();
+                document.getElementById('my-name').innerText = userProfile.displayName;
+                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('main-app').style.display = 'flex';
+                
+                setupPresence(user.uid);
+                setupMessaging();
+                loadContacts();
+
+                if (userProfile.role === 'admin') {
+                    document.getElementById('admin-notice').style.display = 'inline';
+                    loadAllChatsForAdmin();
                 }
-                switchChat("public_hall", "公共大廳");
             } else {
-                document.getElementById('auth-container').style.display = 'block';
+                document.getElementById('auth-box').style.display = 'block';
                 document.getElementById('main-app').style.display = 'none';
             }
         });
 
-        // 2. 註冊/登入
-        document.getElementById('reg-btn').onclick = async () => {
-            const email = document.getElementById('email').value;
-            const pw = document.getElementById('password').value;
-            try {
-                const res = await createUserWithEmailAndPassword(auth, email, pw);
-                await setDoc(doc(db, "users", res.user.uid), { email, role: 'user', uid: res.user.uid });
-                alert("註冊成功！");
-            } catch (e) { alert(e.message); }
+        // 加好友邏輯
+        document.getElementById('add-friend-btn').onclick = async () => {
+            const targetId = document.getElementById('search-id').value;
+            const q = query(collection(db, "users"), where("customId", "==", targetId), limit(1));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const targetUid = snap.docs[0].id;
+                await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: arrayUnion(targetUid) });
+                alert("已加入好友！");
+            } else { alert("找不到該 ID"); }
         };
 
-        document.getElementById('login-btn').onclick = () => {
-            signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value).catch(e => alert(e.message));
-        };
-
-        document.getElementById('logout-btn').onclick = () => signOut(auth);
-
-        // 3. 聊天核心
-        let unsub = null;
-        function switchChat(chatId, title) {
-            currentChatId = chatId;
-            document.getElementById('target-name').innerText = title;
-            if (unsub) unsub();
-
-            const q = query(collection(db, `chats/${chatId}/messages`), orderBy("timestamp", "asc"));
-            unsub = onSnapshot(q, (snapshot) => {
-                const box = document.getElementById('messages-box');
-                box.innerHTML = '';
-                snapshot.forEach(d => {
-                    const data = d.data();
-                    const isMe = data.uid === currentUser.uid;
-                    const content = data.type === 'img' ? `<img src="${data.text}" onclick="window.open('${data.text}')">` : `<span>${data.text}</span>`;
-                    box.innerHTML += `
-                        <div class="msg ${isMe ? 'sent' : 'received'}">
-                            <small class="sender">${data.sender}</small>
-                            ${content}
-                        </div>`;
-                });
-                box.scrollTop = box.scrollHeight;
-            });
-        }
-
-        // 發送文字訊息
-        document.getElementById('send-btn').onclick = async () => {
-            const text = document.getElementById('msg-input').value;
-            if (!text) return;
-            await addDoc(collection(db, `chats/${currentChatId}/messages`), {
-                text, uid: currentUser.uid, sender: currentUser.email, timestamp: serverTimestamp(), type: 'text'
-            });
-            document.getElementById('msg-input').value = '';
-        };
-
-        // 4. 圖片上傳
-        const fileInput = document.getElementById('file-input');
-        document.getElementById('file-trigger').onclick = () => fileInput.click();
-        fileInput.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const sRef = ref(storage, `chat_files/${Date.now()}_${file.name}`);
-            const snap = await uploadBytes(sRef, file);
-            const url = await getDownloadURL(snap.ref);
-            await addDoc(collection(db, `chats/${currentChatId}/messages`), {
-                text: url, uid: currentUser.uid, sender: currentUser.email, timestamp: serverTimestamp(), type: 'img'
-            });
-        };
-
-        // 5. 管理員與列表
-        function loadUserView() {
-            document.getElementById('contact-list').innerHTML = `<li onclick="location.reload()">🌍 公共大廳</li>`;
-        }
-
-        async function loadAdminView() {
+        // 載入列表與在線狀態
+        function loadContacts() {
             const list = document.getElementById('contact-list');
-            list.innerHTML = `<li onclick="location.reload()">🌍 公共大廳</li><div style="padding:10px; font-size:12px; color:#888">所有頻道監控：</div>`;
-            const snap = await getDocs(collection(db, "chats"));
-            snap.forEach(d => {
-                const li = document.createElement('li');
-                li.innerText = `👁️ ${d.id}`;
-                li.onclick = () => switchChat(d.id, `監控中: ${d.id}`);
-                list.appendChild(li);
+            onSnapshot(doc(db, "users", auth.currentUser.uid), (d) => {
+                const friends = d.data().friends || [];
+                list.innerHTML = "";
+                friends.forEach(fUid => {
+                    onSnapshot(doc(db, "users", fUid), (userD) => {
+                        const u = userD.data();
+                        const liId = `li-${fUid}`;
+                        let li = document.getElementById(liId);
+                        if(!li) {
+                            li = document.createElement('li');
+                            li.id = liId;
+                            list.appendChild(li);
+                        }
+                        // 從 RDB 抓取在線狀態
+                        onValue(ref(rdb, '/status/' + fUid), (statusSnap) => {
+                            const s = statusSnap.val()?.state || 'offline';
+                            li.innerHTML = `
+                                <div><span class="status-dot ${s}"></span> <strong>${u.displayName}</strong></div>
+                                <small>ID: ${u.customId}</small>
+                            `;
+                            li.onclick = () => switchChat(fUid, u.displayName);
+                        });
+                    });
+                });
             });
         }
 
-        // 6. 小遊戲
-        document.getElementById('game-btn').onclick = () => {
-            const m = document.getElementById('game-menu');
-            m.style.display = m.style.display === 'block' ? 'none' : 'block';
+        // 聊天與已讀功能
+        let msgUnsub = null;
+        async function switchChat(targetUid, name) {
+            activeChatId = [auth.currentUser.uid, targetUid].sort().join("_");
+            document.getElementById('chat-title').innerText = name;
+            const container = document.getElementById('msg-container');
+            container.innerHTML = "";
+
+            if (msgUnsub) msgUnsub();
+
+            const q = query(collection(db, `chats/${activeChatId}/messages`), orderBy("timestamp", "asc"));
+            msgUnsub = onSnapshot(q, (snapshot) => {
+                container.innerHTML = "";
+                snapshot.forEach(d => {
+                    const m = d.data();
+                    const isMe = m.senderUid === auth.currentUser.uid;
+                    
+                    // 已讀標籤邏輯：如果對方打開了視窗，更新訊息狀態
+                    if (!isMe && !m.read) {
+                        updateDoc(doc(db, `chats/${activeChatId}/messages`, d.id), { read: true });
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = `msg ${isMe ? 'sent' : 'received'}`;
+                    div.innerHTML = `${m.text} ${isMe ? `<span class="read-status">${m.read ? '已讀' : '送達'}</span>` : ''}`;
+                    container.appendChild(div);
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        // 發送訊息
+        document.getElementById('btn-send').onclick = async () => {
+            const val = document.getElementById('msg-input').value;
+            if (!val || !activeChatId) return;
+            await addDoc(collection(db, `chats/${activeChatId}/messages`), {
+                text: val,
+                senderUid: auth.currentUser.uid,
+                timestamp: serverTimestamp(),
+                read: false
+            });
+            document.getElementById('msg-input').value = "";
         };
 
-        window.playGame = async (res) => {
-            await addDoc(collection(db, `chats/${currentChatId}/messages`), {
-                text: res, uid: "system", sender: "🎲 系統", timestamp: serverTimestamp(), type: 'text'
-            });
-            document.getElementById('game-menu').style.display = 'none';
+        // 管理員「偷看」功能
+        async function loadAllChatsForAdmin() {
+            // 管理員會看到額外的列表，列出資料庫中所有的對話路徑
+            // 此處實作略過 UI 細節，但在邏輯上管理員可透過知道路徑來 switchChat
+        }
+
+        // 小遊戲觸發
+        document.getElementById('btn-game').onclick = () => {
+            const p = document.getElementById('game-panel');
+            p.style.display = p.style.display === 'none' ? 'block' : 'none';
         };
+
+        window.sendGame = async (type, res) => {
+            const msg = `[${type}遊戲] 今天午餐推薦吃：${res}`;
+            await addDoc(collection(db, `chats/${activeChatId}/messages`), {
+                text: msg,
+                senderUid: auth.currentUser.uid,
+                timestamp: serverTimestamp(),
+                read: false
+            });
+            document.getElementById('game-panel').style.display = 'none';
+        };
+
+        document.getElementById('logout').onclick = () => signOut(auth);
+
     </script>
 </body>
 </html>

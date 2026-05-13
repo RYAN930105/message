@@ -1,394 +1,332 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Enterprise Collaborative Chat & Decision Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniChat Ultra - 專業通訊系統</title>
     <style>
-        :root { --admin-red: #d9534f; --user-blue: #0275d8; --offline-gray: #f4f4f4; }
-        body { margin: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        :root { --primary: #075e54; --secondary: #128c7e; --bg: #e5ddd5; --white: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #dadbd3; margin: 0; display: flex; height: 100vh; justify-content: center; align-items: center; }
         
-        /* 側邊導航欄 */
-        #sidebar { width: 280px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; padding: 15px; }
-       .user-profile { padding: 10px; border-bottom: 1px solid #34495e; margin-bottom: 15px; }
-       .nav-item { padding: 12px; cursor: pointer; transition: 0.3s; border-radius: 4px; margin-bottom: 5px; }
-       .nav-item:hover { background: #34495e; }
-       .online-status { font-size: 0.8em; display: flex; align-items: center; gap: 5px; }
-       .dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; }
+        /* 登入視窗 */
+        #auth-box { background: var(--white); padding: 30px; border-radius: 10px; shadow: 0 2px 10px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
+        /* 主介面容器 */
+        #main-app { display: none; width: 100vw; height: 100vh; background: #ededed; display: flex; overflow: hidden; }
+        
+        /* 左側欄：好友與狀態 */
+        #side-bar { width: 350px; background: var(--white); border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        .user-profile { padding: 20px; background: #eee; display: flex; align-items: center; justify-content: space-between; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .online { background: #4caf50; } .offline { background: #9e9e9e; } .busy { background: #f44336; }
+        
+        #contact-list { flex-grow: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        #contact-list li { padding: 15px 20px; border-bottom: 1px solid #f2f2f2; cursor: pointer; display: flex; flex-direction: column; }
+        #contact-list li:hover { background: #f5f5f5; }
+        .unread-badge { background: #25d366; color: white; border-radius: 10px; padding: 2px 6px; font-size: 10px; float: right; }
+
         /* 聊天主區域 */
-        #main-chat { flex: 1; display: flex; flex-direction: column; background: #fff; }
-        #chat-header { height: 60px; border-bottom: 1px solid #eee; display: flex; align-items: center; padding: 0 20px; font-weight: bold; justify-content: space-between; }
-        #messages-display { flex: 1; overflow-y: auto; padding: 20px; background: #f9f9f9; }
-        #input-area { height: 80px; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; }
-        #input-area input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
+        #chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
+        #chat-header { padding: 15px 25px; background: #eee; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
+        #msg-container { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         
-        /* 遊戲組件樣式 */
-        #game-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; z-index: 1000; align-items: center; justify-content: center; flex-direction: column; }
-        canvas { background: #fff; border-radius: 50%; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-       .modal { background: #fff; padding: 30px; border-radius: 8px; width: 400px; text-align: center; }
-        
-        /* 訊息氣泡 */
-       .msg-bubble { max-width: 70%; padding: 10px 15px; border-radius: 18px; margin-bottom: 10px; position: relative; clear: both; }
-       .msg-remote { background: #fff; border: 1px solid #eee; float: left; }
-       .msg-me { background: var(--user-blue); color: #fff; float: right; }
-       .read-status { font-size: 0.7em; color: #aaa; margin-left: 5px; }
+        /* 訊息泡泡 */
+        .msg { padding: 8px 12px; border-radius: 8px; max-width: 60%; position: relative; font-size: 14px; }
+        .msg.sent { background: #dcf8c6; align-self: flex-end; }
+        .msg.received { background: var(--white); align-self: flex-start; }
+        .read-status { font-size: 10px; color: #34b7f1; margin-left: 5px; vertical-align: bottom; }
+
+        /* 控制列 */
+        #input-area { padding: 15px; background: #f0f0f0; display: flex; gap: 10px; align-items: center; }
+        #game-panel { position: absolute; bottom: 80px; left: 20px; background: white; border-radius: 10px; padding: 15px; display: none; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
+
+        .admin-view { color: #d32f2f; font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
 
-<div id="auth-screen" style="position: absolute; inset: 0; background: #eee; z-index: 2000; display: flex; align-items: center; justify-content: center;">
-    <div class="modal">
-        <h2>即時協作平台</h2>
-        <input type="email" id="email" placeholder="電子郵件" style="width:80%; padding:8px; margin:5px;"><br>
-        <input type="password" id="password" placeholder="密碼" style="width:80%; padding:8px; margin:5px;"><br>
-        <input type="text" id="custom-id" placeholder="設定 ID (如 user_88)" style="width:80%; padding:8px; margin:5px;"><br>
-        <input type="text" id="display-name" placeholder="顯示名稱" style="width:80%; padding:8px; margin:5px;"><br><br>
-        <button onclick="handleAuth('login')">登入</button>
-        <button onclick="handleAuth('register')">註冊帳號</button>
-    </div>
-</div>
-
-<div id="sidebar">
-    <div class="user-profile">
-        <div id="my-name" style="font-size: 1.2em; font-weight: bold;">---</div>
-        <div id="my-id" style="color: #bdc3c7; font-size: 0.9em;">@---</div>
-        <div class="online-status">
-            <span id="my-status-dot" class="dot" style="background:#95a5a6;"></span>
-            <select id="status-selector" style="background:none; color:#fff; border:none; outline:none;">
-                <option value="online">在線</option>
-                <option value="busy">忙碌</option>
-                <option value="offline">隱身</option>
-            </select>
+    <!-- 登入模組 -->
+    <div id="auth-box">
+        <h2 id="title">OmniChat 登入</h2>
+        <input type="email" id="email" placeholder="電子信箱">
+        <input type="password" id="password" placeholder="密碼">
+        <div id="reg-fields" style="display:none">
+            <input type="text" id="user-id" placeholder="唯一 ID (例如: user_01)">
+            <input type="text" id="user-name" placeholder="顯示名稱">
         </div>
+        <button id="login-btn">登入</button>
+        <button id="toggle-reg" style="background:#888">切換到註冊</button>
     </div>
-    
-    <div style="font-weight:bold; margin-top:10px;">好友 <button onclick="addFriend()" style="float:right; font-size:0.7em;">+</button></div>
-    <div id="friends-list" style="flex:1; overflow-y:auto;"></div>
 
-    <div style="font-weight:bold; margin-top:10px;">群組 <button onclick="createGroup()" style="float:right; font-size:0.7em;">+</button></div>
-    <div id="groups-list" style="height: 150px; overflow-y:auto;"></div>
-    
-    <div style="margin-top:auto;">
-        <button onclick="triggerGame('roulette')" style="width:100%; margin-bottom:5px;">午餐輪盤</button>
-        <button onclick="triggerGame('ladder')" style="width:100%;">爬梯子決策</button>
-    </div>
-</div>
+    <!-- 主程式 -->
+    <div id="main-app" style="display:none">
+        <aside id="side-bar">
+            <div class="user-profile">
+                <div>
+                    <span id="my-name">載入中...</span>
+                    <select id="status-select" style="font-size:10px">
+                        <option value="online">在線</option>
+                        <option value="busy">忙碌</option>
+                        <option value="offline">離線</option>
+                    </select>
+                </div>
+                <button id="logout" style="width:auto; padding:5px; font-size:10px">登出</button>
+            </div>
+            <div style="padding:10px">
+                <input type="text" id="search-id" placeholder="搜尋 ID 加好友...">
+                <button id="add-friend-btn" style="padding:5px">加好友</button>
+                <button id="create-group" style="padding:5px; background:#25d366">建立群組</button>
+            </div>
+            <ul id="contact-list"></ul>
+        </aside>
 
-<div id="main-chat">
-    <div id="chat-header">
-        <span id="active-target">請選擇對話</span>
-        <div id="admin-badge" style="background:var(--admin-red); color:#fff; font-size:0.6em; padding:3px 8px; border-radius:10px; display:none;">ADMIN MODE</div>
-    </div>
-    <div id="messages-display"></div>
-    <div id="input-area">
-        <input type="text" id="message-input" placeholder="僅限輸入文字訊息...">
-        <button onclick="sendMessage()">發送</button>
-    </div>
-</div>
-
-<div id="game-overlay">
-    <h2 id="game-label" style="color:#fff;"></h2>
-    <canvas id="game-board" width="500" height="500"></canvas>
-    <div id="game-result" style="margin-top:20px; color:#fff; font-size:1.5em;"></div>
-    <button onclick="closeGame()" style="margin-top:20px; padding:10px 40px;">關閉遊戲</button>
-</div>
-
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
-    import { getDatabase, ref, set, push, onValue, update, onDisconnect, serverTimestamp, get, runTransaction } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
-    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-messaging.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyDVXY8MHOOtwiMlj5qWukblZEwE-U4XAH4",
-        authDomain: "message-2a055.firebaseapp.com",
-        projectId: "message-2a055",
-        storageBucket: "message-2a055.firebasestorage.app",
-        messagingSenderId: "690334146917",
-        appId: "1:690334146917:web:190659e9a11a0b3500c18c",
-        measurementId: "G-8CPKBYSNQB"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-    const messaging = getMessaging(app);
-
-    let me = null; // 當前使用者物件
-    let activeChatId = null;
-    let is_admin = false;
-
-    // --- 認證邏輯 ---
-    window.handleAuth = async (type) => {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('password').value;
-        const cid = document.getElementById('custom-id').value;
-        const name = document.getElementById('display-name').value;
-
-        try {
-            if (type === 'register') {
-                if (!cid ||!name) return alert("請填寫 ID 與名稱");
-                const cred = await createUserWithEmailAndPassword(auth, email, pass);
-                const uid = cred.user.uid;
-                // 雙向索引寫入
-                await set(ref(db, `users/${uid}`), { customId: cid, name: name, status: 'online' });
-                await set(ref(db, `ids/${cid}`), uid);
-            } else {
-                await signInWithEmailAndPassword(auth, email, pass);
-            }
-        } catch (err) { alert(err.message); }
-    };
-
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            document.getElementById('auth-screen').style.display = 'none';
-            const snap = await get(ref(db, `users/${user.uid}`));
-            me = { uid: user.uid,...snap.val() };
+        <section id="chat-window">
+            <header id="chat-header">
+                <span id="chat-title">請選擇好友</span>
+                <span id="admin-notice" class="admin-view" style="display:none">管理員監控中</span>
+            </header>
             
-            initDashboard();
-            setupPresence();
-            setupNotifications();
-            checkAdminStatus();
-        } else {
-            document.getElementById('auth-screen').style.display = 'flex';
-        }
-    });
+            <div id="msg-container"></div>
 
-    // --- 管理員監控偵測 ---
-    async function checkAdminStatus() {
-        // 在數據庫中預先手動設置 admins/UID 為 true
-        const adminSnap = await get(ref(db, `admins/${me.uid}`));
-        if (adminSnap.exists()) {
-            is_admin = true;
-            document.getElementById('admin-badge').style.display = 'block';
-            enableAdminMonitor();
-        }
-    }
+            <div id="game-panel">
+                <strong>決定午餐：</strong><br>
+                <button onclick="sendGame('輪盤', '雞肉飯')">🐔 雞肉飯</button>
+                <button onclick="sendGame('投票', '麥當勞')">🍟 麥當勞</button>
+                <button onclick="sendGame('爬梯子', '便利商店')">🏪 便利商店</button>
+            </div>
 
-    function enableAdminMonitor() {
-        console.log("Admin Monitor Enabled. You can now subscribe to any /messages path.");
-        // 此處邏輯為：若管理員點擊任何用戶，可直接開啟對話而不受權限限制
-    }
+            <div id="input-area">
+                <button id="btn-game">🎲</button>
+                <input type="text" id="msg-input" placeholder="輸入訊息...">
+                <button id="btn-send">發送</button>
+            </div>
+        </section>
+    </div>
 
-    // --- 在線狀態系統 ---
-    function setupPresence() {
-        const myStatusRef = ref(db, `users/${me.uid}/status`);
-        const connectedRef = ref(db, ".info/connected");
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp, doc, getDoc, setDoc, updateDoc, arrayUnion, where, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getDatabase, ref, onValue, set, onDisconnect, serverTimestamp as rdbTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
-        onValue(connectedRef, (snap) => {
-            if (snap.val() === true) {
-                // 當前連線正常，註冊離線後的操作
-                onDisconnect(myStatusRef).set("offline");
-                set(myStatusRef, document.getElementById('status-selector').value);
-            }
-        });
-
-        document.getElementById('status-selector').onchange = (e) => {
-            set(myStatusRef, e.target.value);
-            updateDot(e.target.value);
+        // === 1. 設定區域 (請替換為您的配置) ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVXY8MHOOtwiMlj5qWukblZEwE-U4XAH4",
+            authDomain: "message-2a055.firebaseapp.com",
+            databaseURL: "https://message-2a055-default-rtdb.firebaseio.com",
+            projectId: "message-2a055",
+            storageBucket: "message-2a055.firebasestorage.app",
+            messagingSenderId: "690334146917",
+            appId: "1:690334146917:web:190659e9a11a0b3500c18c",
+            measurementId: "G-8CPKBYSNQB"
         };
-    }
 
-    function updateDot(status) {
-        const dot = document.getElementById('my-status-dot');
-        const colors = { online: '#28a745', busy: '#f1c40f', offline: '#95a5a6' };
-        dot.style.background = colors[status] |
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const rdb = getDatabase(app);
+        const messaging = getMessaging(app);
 
-| '#95a5a6';
-    }
+        let userProfile = null;
+        let activeChatId = null;
+        let isRegMode = false;
 
-    // --- 好友與群組 ---
-    window.addFriend = async () => {
-        const targetId = prompt("請輸入好友 ID (@...):");
-        if (!targetId) return;
-        const idSnap = await get(ref(db, `ids/${targetId}`));
-        if (idSnap.exists()) {
-            const targetUid = idSnap.val();
-            await update(ref(db, `friends/${me.uid}`), { [targetUid]: true });
-            await update(ref(db, `friends/${targetUid}`), { [me.uid]: true });
-            alert("已成功添加好友");
-        } else {
-            alert("找不到該 ID");
-        }
-    };
+        // === 2. 註冊與登入 ===
+        document.getElementById('toggle-reg').onclick = () => {
+            isRegMode = !isRegMode;
+            document.getElementById('reg-fields').style.display = isRegMode ? 'block' : 'none';
+            document.getElementById('title').innerText = isRegMode ? 'OmniChat 註冊' : 'OmniChat 登入';
+            document.getElementById('login-btn').innerText = isRegMode ? '完成註冊' : '登入';
+        };
 
-    window.createGroup = async () => {
-        const gName = prompt("請輸入群組名稱:");
-        if (!gName) return;
-        const gRef = push(ref(db, 'groups'));
-        await set(gRef, {
-            name: gName,
-            creator: me.uid,
-            members: { [me.uid]: true }
-        });
-        await update(ref(db, `users/${me.uid}/myGroups`), {: true });
-    };
+        document.getElementById('login-btn').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const pw = document.getElementById('password').value;
 
-    // --- 訊息發送與清空 ---
-    window.sendMessage = () => {
-        const input = document.getElementById('message-input');
-        const text = input.value.trim();
-        if (!text ||!activeChatId) return;
+            if (isRegMode) {
+                const uid = document.getElementById('user-id').value;
+                const name = document.getElementById('user-name').value;
+                try {
+                    const res = await createUserWithEmailAndPassword(auth, email, pw);
+                    await setDoc(doc(db, "users", res.user.uid), { 
+                        customId: uid, 
+                        displayName: name, 
+                        email: email, 
+                        role: 'user',
+                        friends: []
+                    });
+                } catch (e) { alert(e.message); }
+            } else {
+                signInWithEmailAndPassword(auth, email, pw).catch(e => alert(e.message));
+            }
+        };
 
-        const msgRef = push(ref(db, `messages/${activeChatId}`));
-        set(msgRef, {
-            sender: me.uid,
-            senderName: me.name,
-            text: text,
-            timestamp: serverTimestamp(),
-            seen: false
-        });
+        // === 3. 線上狀態 (onDisconnect) ===
+        function setupPresence(uid) {
+            const statusRef = ref(rdb, '/status/' + uid);
+            const connectedRef = ref(rdb, '.info/connected');
 
-        input.value = ""; // 關鍵需求：傳完後自動清空 [31]
-        input.focus();
-    };
-
-    // --- 已讀標籤與對話加載 ---
-    function openChat(chatId, title) {
-        activeChatId = chatId;
-        document.getElementById('active-target').innerText = title;
-        const display = document.getElementById('messages-display');
-        
-        onValue(ref(db, `messages/${chatId}`), (snapshot) => {
-            display.innerHTML = "";
-            snapshot.forEach((child) => {
-                const data = child.val();
-                const div = document.createElement('div');
-                div.className = `msg-bubble ${data.sender === me.uid? 'msg-me' : 'msg-remote'}`;
-                
-                // 更新已讀狀態
-                if (data.sender!== me.uid &&!data.seen) {
-                    update(ref(db, `messages/${chatId}/${child.key}`), { seen: true });
+            onValue(connectedRef, (snap) => {
+                if (snap.val() === true) {
+                    onDisconnect(statusRef).set({ state: 'offline', last_changed: rdbTimestamp() });
+                    set(statusRef, { state: 'online', last_changed: rdbTimestamp() });
                 }
-
-                div.innerHTML = `
-                    <div style="font-size:0.7em; opacity:0.7;">${data.senderName}</div>
-                    <div>${data.text}</div>
-                    <span class="read-status">${data.seen? '已讀' : '未讀'}</span>
-                `;
-                display.appendChild(div);
             });
-            display.scrollTop = display.scrollHeight;
+
+            document.getElementById('status-select').onchange = (e) => {
+                set(statusRef, { state: e.target.value, last_changed: rdbTimestamp() });
+            };
+        }
+
+        // === 4. 推播通知 ===
+        async function setupMessaging() {
+            try {
+                const token = await getToken(messaging, { vapidKey: 'YOUR_VAPID_KEY' });
+                if (token) await updateDoc(doc(db, "users", auth.currentUser.uid), { fcmToken: token });
+            } catch (e) { console.log("通知權限遭拒"); }
+        }
+
+        onMessage(messaging, (payload) => {
+            new Notification(payload.notification.title, { body: payload.notification.body });
         });
-    }
 
-    // --- 推播通知 (Cloud Messaging) ---
-    async function setupNotifications() {
-        try {
-            const token = await getToken(messaging, { vapidKey: "BPA-YOUR-PUBLIC-VAPID-KEY-HERE" });
-            if (token) {
-                await update(ref(db, `users/${me.uid}`), { fcm_token: token });
+        // === 5. 核心邏輯：監聽與通訊 ===
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                userProfile = userDoc.data();
+                document.getElementById('my-name').innerText = userProfile.displayName;
+                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('main-app').style.display = 'flex';
+                
+                setupPresence(user.uid);
+                setupMessaging();
+                loadContacts();
+
+                if (userProfile.role === 'admin') {
+                    document.getElementById('admin-notice').style.display = 'inline';
+                    loadAllChatsForAdmin();
+                }
+            } else {
+                document.getElementById('auth-box').style.display = 'block';
+                document.getElementById('main-app').style.display = 'none';
             }
-        } catch (e) { console.warn("通知註冊失敗", e); }
-    }
+        });
 
-    onMessage(messaging, (payload) => {
-        // 前台收到訊息時的處理邏輯
-        new Notification(payload.notification.title, { body: payload.notification.body });
-    });
-
-    // --- 小遊戲模組：輪盤邏輯 ---
-    window.triggerGame = (type) => {
-        const overlay = document.getElementById('game-overlay');
-        overlay.style.display = 'flex';
-        if (type === 'roulette') {
-            initRoulette();
-        } else if (type === 'ladder') {
-            initLadder();
-        }
-    };
-
-    function initRoulette() {
-        const canvas = document.getElementById('game-board');
-        const ctx = canvas.getContext('2d');
-        const options = ["牛肉麵", "燒臘", "便利商店", "泰式", "壽司", "快餐"];
-        let angle = 0;
-        
-        const draw = () => {
-            const slice = (Math.PI * 2) / options.length;
-            options.forEach((opt, i) => {
-                ctx.fillStyle = i % 2 === 0? "#f1c40f" : "#e67e22";
-                ctx.beginPath();
-                ctx.moveTo(250, 250);
-                ctx.arc(250, 250, 230, angle + i * slice, angle + (i + 1) * slice);
-                ctx.fill();
-                ctx.save();
-                ctx.translate(250, 250);
-                ctx.rotate(angle + i * slice + slice/2);
-                ctx.fillStyle = "#fff";
-                ctx.fillText(opt, 100, 0);
-                ctx.restore();
-            });
+        // 加好友邏輯
+        document.getElementById('add-friend-btn').onclick = async () => {
+            const targetId = document.getElementById('search-id').value;
+            const q = query(collection(db, "users"), where("customId", "==", targetId), limit(1));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const targetUid = snap.docs[0].id;
+                await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: arrayUnion(targetUid) });
+                alert("已加入好友！");
+            } else { alert("找不到該 ID"); }
         };
-        
-        let speed = 0.5;
-        const spin = () => {
-            angle += speed;
-            speed *= 0.98; // 摩擦力
-            ctx.clearRect(0, 0, 500, 500);
-            draw();
-            if (speed > 0.001) requestAnimationFrame(spin);
-            else {
-                const winner = Math.floor(((angle % (Math.PI * 2)) / (Math.PI * 2)) * options.length);
-                document.getElementById('game-result').innerText = "結果：" + options[winner];
-            }
-        };
-        spin();
-    }
 
-    function initLadder() {
-        const canvas = document.getElementById('game-board');
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0,0,500,500);
-        ctx.strokeStyle = "#333";
-        ctx.lineWidth = 3;
-        const players = 5;
-        const xStep = 400 / (players - 1);
-        
-        // 繪製垂直線
-        for(let i=0; i<players; i++) {
-            ctx.beginPath();
-            ctx.moveTo(50 + i * xStep, 50);
-            ctx.lineTo(50 + i * xStep, 450);
-            ctx.stroke();
-        }
-        
-        // 隨機橫槓
-        for(let j=0; j<15; j++) {
-            const line = Math.floor(Math.random() * (players - 1));
-            const y = 80 + Math.random() * 320;
-            ctx.beginPath();
-            ctx.moveTo(50 + line * xStep, y);
-            ctx.lineTo(50 + (line + 1) * xStep, y);
-            ctx.stroke();
-        }
-    }
-
-    window.closeGame = () => {
-        document.getElementById('game-overlay').style.display = 'none';
-    };
-
-    function initDashboard() {
-        document.getElementById('my-name').innerText = me.name;
-        document.getElementById('my-id').innerText = "@" + me.customId;
-        // 加載好友列表
-        onValue(ref(db, `friends/${me.uid}`), (snap) => {
-            const list = document.getElementById('friends-list');
-            list.innerHTML = "";
-            snap.forEach(f => {
-                get(ref(db, `users/${f.key}`)).then(u => {
-                    const d = document.createElement('div');
-                    d.className = "nav-item";
-                    d.innerHTML = `<span>●</span> ${u.val().name}`;
-                    d.onclick = () => {
-                        const chatId = me.uid < f.key? me.uid + "_" + f.key : f.key + "_" + me.uid;
-                        openChat(chatId, u.val().name);
-                    };
-                    list.appendChild(d);
+        // 載入列表與在線狀態
+        function loadContacts() {
+            const list = document.getElementById('contact-list');
+            onSnapshot(doc(db, "users", auth.currentUser.uid), (d) => {
+                const friends = d.data().friends || [];
+                list.innerHTML = "";
+                friends.forEach(fUid => {
+                    onSnapshot(doc(db, "users", fUid), (userD) => {
+                        const u = userD.data();
+                        const liId = `li-${fUid}`;
+                        let li = document.getElementById(liId);
+                        if(!li) {
+                            li = document.createElement('li');
+                            li.id = liId;
+                            list.appendChild(li);
+                        }
+                        // 從 RDB 抓取在線狀態
+                        onValue(ref(rdb, '/status/' + fUid), (statusSnap) => {
+                            const s = statusSnap.val()?.state || 'offline';
+                            li.innerHTML = `
+                                <div><span class="status-dot ${s}"></span> <strong>${u.displayName}</strong></div>
+                                <small>ID: ${u.customId}</small>
+                            `;
+                            li.onclick = () => switchChat(fUid, u.displayName);
+                        });
+                    });
                 });
             });
-        });
-    }
-</script>
+        }
+
+        // 聊天與已讀功能
+        let msgUnsub = null;
+        async function switchChat(targetUid, name) {
+            activeChatId = [auth.currentUser.uid, targetUid].sort().join("_");
+            document.getElementById('chat-title').innerText = name;
+            const container = document.getElementById('msg-container');
+            container.innerHTML = "";
+
+            if (msgUnsub) msgUnsub();
+
+            const q = query(collection(db, `chats/${activeChatId}/messages`), orderBy("timestamp", "asc"));
+            msgUnsub = onSnapshot(q, (snapshot) => {
+                container.innerHTML = "";
+                snapshot.forEach(d => {
+                    const m = d.data();
+                    const isMe = m.senderUid === auth.currentUser.uid;
+                    
+                    // 已讀標籤邏輯：如果對方打開了視窗，更新訊息狀態
+                    if (!isMe && !m.read) {
+                        updateDoc(doc(db, `chats/${activeChatId}/messages`, d.id), { read: true });
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = `msg ${isMe ? 'sent' : 'received'}`;
+                    div.innerHTML = `${m.text} ${isMe ? `<span class="read-status">${m.read ? '已讀' : '送達'}</span>` : ''}`;
+                    container.appendChild(div);
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        // 發送訊息
+        document.getElementById('btn-send').onclick = async () => {
+            const val = document.getElementById('msg-input').value;
+            if (!val || !activeChatId) return;
+            await addDoc(collection(db, `chats/${activeChatId}/messages`), {
+                text: val,
+                senderUid: auth.currentUser.uid,
+                timestamp: serverTimestamp(),
+                read: false
+            });
+            document.getElementById('msg-input').value = "";
+        };
+
+        // 管理員「偷看」功能
+        async function loadAllChatsForAdmin() {
+            // 管理員會看到額外的列表，列出資料庫中所有的對話路徑
+            // 此處實作略過 UI 細節，但在邏輯上管理員可透過知道路徑來 switchChat
+        }
+
+        // 小遊戲觸發
+        document.getElementById('btn-game').onclick = () => {
+            const p = document.getElementById('game-panel');
+            p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        };
+
+        window.sendGame = async (type, res) => {
+            const msg = `[${type}遊戲] 今天午餐推薦吃：${res}`;
+            await addDoc(collection(db, `chats/${activeChatId}/messages`), {
+                text: msg,
+                senderUid: auth.currentUser.uid,
+                timestamp: serverTimestamp(),
+                read: false
+            });
+            document.getElementById('game-panel').style.display = 'none';
+        };
+
+        document.getElementById('logout').onclick = () => signOut(auth);
+
+    </script>
 </body>
 </html>
